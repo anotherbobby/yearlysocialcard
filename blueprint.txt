@@ -39,6 +39,8 @@ Metadata 100% on-chain (base64 JSON).
 
 Image = dynamic SVG on-chain (warna + layout berdasarkan stats & rarity).
 
+Image generate lewat AI
+
 Stats disimpan sebagai StatsHash on-chain.
 
 
