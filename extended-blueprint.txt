@@ -81,7 +81,7 @@ warna berdasarkan rarity
 
 layout teks
 
-avatar (farcaster avatar →  convert avatar ke tema old pixel)
+avatar (farcaster avatar →  convert avatar ke tema old pixel off chain menggunakan AI API)
 
 
 
@@ -95,7 +95,7 @@ FID + username
 
 Year
 
-Timeline window
+YearId
 
 
 Semua ditulis sebagai SVG path / text.
@@ -224,13 +224,13 @@ Main functions:
 
 8️⃣ LEADERBOARD FEATURE (UPDATED)
 
-Leaderboard bekerja dengan rolling stats window, bukan kalender.
+Leaderboard bekerja dengan fix kalender.
 
 Leaderboard categories:
 
-🟣 1. Most Casts (12mo window)
+🟣 1. Most Casts 
 
-🟣 2. Most Likes (12mo window)
+🟣 2. Most Likes 
 
 🟣 3. Highest Engagement
 
