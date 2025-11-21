@@ -1,0 +1,101 @@
+🌟 Blueprint Singkat — Farcaster Yearly Social Trading Cards
+
+Konsep Utama
+
+Mint 1 kartu per tahun (reset 1 Januari UTC).
+
+Statistik diambil 1 tahun ke belakang dari tanggal mint (rolling 365 days).
+
+Mint fee 0.0005 ETH (Base chain).
+
+Royalti 3% ke minter (ERC2981).
+
+Metadata & image fully on-chain (on-chain JSON + SVG).
+
+Bisa share langsung ke Farcaster setelah mint.
+
+Leaderboard berdasarkan rolling stats + rarity score.
+
+
+
+---
+
+Fitur Utama
+
+1. Minting Rules
+
+1 mint per user per tahun.
+
+Window stats: now - 365 days → now.
+
+Fee 0.0005 ETH.
+
+Eligibility reset otomatis tiap 1 Januari UTC.
+
+
+2. On-Chain Metadata & Image
+
+Metadata 100% on-chain (base64 JSON).
+
+Image = dynamic SVG on-chain (warna + layout berdasarkan stats & rarity).
+
+Stats disimpan sebagai StatsHash on-chain.
+
+
+3. Royalti
+
+ERC2981
+
+3% diteruskan ke minter, bukan creator.
+
+
+4. Leaderboard
+
+Rolling 365-day stats (casts, likes, engagement, followers, consistency).
+
+Based on minted cards.
+
+Rarity leaderboard + stat leaderboard.
+
+
+5. Farcaster Mini-App (Frames)
+
+Frame 1: Home → cek eligibility & preview stats.
+
+Frame 2: Mint (bayar 0.0005 ETH).
+
+Frame 3: Success → tampilkan NFT SVG + tombol Share to Farcaster.
+
+
+
+---
+
+Smart Contract Core
+
+mint(fid, username, statsStruct)
+
+lastMintYear[fid]
+
+royaltyReceiver[tokenId] = minter
+
+generateSVG(stats) → on-chain SVG
+
+tokenURI(tokenId) → base64 JSON
+
+royaltyInfo(tokenId, salePrice)
+
+
+
+---
+
+Goals
+
+Kartu tahunan Farcaster yang unik per user.
+
+Stats 1-year window.
+
+On-chain permanence.
+
+Shareability & virality via Farcaster.
+
+User mendapat royalti ketika kartunya dijual.
