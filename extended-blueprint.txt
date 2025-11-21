@@ -81,7 +81,7 @@ warna berdasarkan rarity
 
 layout teks
 
-avatar (opsional: farcaster avatar → off-chain → convert ke small SVG pattern)
+avatar (farcaster avatar →  convert avatar ke tema old pixel)
 
 
 
