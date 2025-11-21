@@ -1,0 +1,288 @@
+
+🚀 FARCASTER YEARLY SOCIAL TRADING CARD — BLUEPRINT FINAL
+
+
+---
+
+1️⃣ CORE CONCEPT
+
+Setiap user Farcaster dapat mint 1 kartu per tahun, dengan:
+
+Statistik 1 tahun ke belakang dari tanggal mint
+
+Reset eligibility setiap 1 Januari UTC
+
+Mint fee 0.0005 ETH (Base chain)
+
+Royalti 3% ke minter (bukan creator)
+
+Fully on-chain metadata & image
+
+In-app share ke Farcaster setelah mint
+
+
+
+---
+
+2️⃣ ON-CHAIN IMAGE + METADATA
+
+🧱 Menggunakan:
+
+ERC-721 + on-chain JSON metadata
+
+Image dihasilkan sebagai: → SVG fully on-chain, disimpan dalam bytes
+→ Diencode base64 dalam metadata
+
+
+📌 Kenapa SVG?
+
+Ringan
+
+Murah gas di Base (EVM L2)
+
+Bisa dynamic tanpa IPFS
+
+On-chain permanence (desentralisasi penuh)
+
+
+Contoh struktur metadata on-chain:
+
+{
+  "name": "2025 Farcaster Trading Card #0001",
+  "description": "1-Year Farcaster Stats (May 2024 → May 2025)",
+  "image": "data:image/svg+xml;base64,PHN2ZyB4bWxu…",
+  "attributes": [
+    {"trait_type": "FID", "value": 12345},
+    {"trait_type": "Year", "value": "2025"},
+    {"trait_type": "Casts", "value": 954},
+    {"trait_type": "Likes Received", "value": 12044},
+    {"trait_type": "Consistency", "value": "11/12"},
+    {"trait_type": "Rarity Score", "value": 92},
+    {"trait_type": "Rarity Tier", "value": "Legendary"}
+  ]
+}
+
+✔ Metadata 100% on-chain
+
+✔ Image 100% on-chain
+
+✔ Tidak butuh IPFS / Arweave
+
+
+---
+
+3️⃣ IMAGE GENERATION (ON-CHAIN SVG)
+
+Contract akan:
+
+Render SVG berdasarkan stats:
+
+warna berdasarkan rarity
+
+layout teks
+
+avatar (opsional: farcaster avatar → off-chain → convert ke small SVG pattern)
+
+
+
+Bagian yang paling dinamis:
+
+Rarity color
+
+Stats text
+
+FID + username
+
+Year
+
+Timeline window
+
+
+Semua ditulis sebagai SVG path / text.
+
+
+---
+
+4️⃣ SHARE TO FARCASTER — INTEGRATED
+
+Setelah mint:
+
+Mini-app mengirim:
+
+Link NFT di Base
+
+Card preview image
+
+Caption default
+
+
+Bentuk share:
+
+Auto-generated cast:
+
+> I just minted my 2025 Farcaster Yearly Card!
+My top stat this year: 12k likes received.
+Mint yours → (Frame URL)
+
+
+
+Di frame akan ada tombol:
+
+🔵 “Share to Farcaster”
+
+Menggunakan Frame Action (Signer Required)
+
+User cukup klik → langsung cast
+
+
+API backend:
+
+Tidak menyimpan metadata (on-chain)
+
+Hanya menyediakan “share text suggestion” + preview image link (already on-chain)
+
+
+
+---
+
+5️⃣ NFT ROYALTY SYSTEM (ERC2981)
+
+Royalti:
+
+3% dari harga jual
+
+Directly paid ke wallet minter
+
+
+Implementation:
+
+royaltyReceiver[tokenId] = minterAddress;
+
+Marketplace seperti OpenSea Base → otomatis honor ERC2981.
+
+
+---
+
+6️⃣ MINTING RULES (UPDATED)
+
+Eligibility:
+
+Bisa mint kapan saja
+
+Tapi 1x pertahun (year ID)
+
+
+Year ID:
+
+yearID = year(block.timestamp)  // UTC
+
+Stats window:
+
+from = block.timestamp - 365 days
+to = block.timestamp
+
+Fee:
+
+require(msg.value == 0.0005 ether)
+
+
+---
+
+7️⃣ SMART CONTRACT ARCHITECTURE — COMPLETE
+
+Variables:
+
+Variable	Description
+
+mapping(fid → lastMintYear)	Cegah double mint tahun yang sama
+mapping(tokenId → royaltyReceiver)	Royalti minter
+mapping(tokenId → StatsHash)	Bukti stat (on-chain hash)
+renderSVG(stats)	Function generate gambar
+tokenURI(tokenId)	Return JSON metadata fully on-chain
+
+
+Main functions:
+
+1. mint(fid, username, statsStruct)
+
+
+2. generateSVG(stats)
+
+
+3. tokenURI(tokenId)
+
+
+4. royaltyInfo(tokenId, price)
+
+
+5. hasMintedThisYear(fid)
+
+
+
+
+---
+
+8️⃣ LEADERBOARD FEATURE (UPDATED)
+
+Leaderboard bekerja dengan rolling stats window, bukan kalender.
+
+Leaderboard categories:
+
+🟣 1. Most Casts (12mo window)
+
+🟣 2. Most Likes (12mo window)
+
+🟣 3. Highest Engagement
+
+🟣 4. Highest Consistency
+
+🟣 5. Highest Rarity Score
+
+🟣 6. Top Traders (royalty earned)
+
+🟣 7. Most Valuable Card (sales price)
+
+Display:
+
+On Farcaster Frame
+
+Sorted daily / weekly
+
+Top 100
+
+
+Stats biasanya di AR/Redis / simple DB, bukan on-chain.
+
+
+---
+
+9️⃣ MINI-APP (FRAME) FLOW — FINAL VERSION
+
+Frame 1 — Home
+
+“Mint yearly card (0.0005 ETH)”
+→ Show minted status / countdown to reset
+
+Frame 2 — Stats preview
+
+Show rolling stats (fetched off-chain)
+
+Frame 3 — Confirm mint
+
+Button:
+
+> Mint Now (Pay 0.0005 ETH)
+
+
+
+Frame 4 — Success
+
+Tampilkan NFT (SVG)
+
+Tombol:
+
+
+🔵 Share to Farcaster
+🔵 View on BaseScan
+🔵 View on OpenSea
+
