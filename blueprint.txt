@@ -6,6 +6,8 @@ Mint 1 kartu per tahun (reset 1 Januari UTC).
 
 Statistik diambil 1 tahun ke belakang dari tanggal mint (rolling 365 days).
 
+Statistik yang diambil jumlah cast, total like dan recast, engagement rate, social graph, active streak (sumber data dari neynar).
+
 Mint fee 0.0005 ETH (Base chain).
 
 Royalti 3% ke minter (ERC2981).
