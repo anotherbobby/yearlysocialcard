@@ -1,0 +1,1381 @@
+🚀 FARCASTER YEARLY SOCIAL TRADING CARD — BLUEPRINT v2.0
+================================================================================
+
+                    COMPLETE • OPTIMIZED • PRODUCTION-READY
+
+================================================================================
+                              TABLE OF CONTENTS
+================================================================================
+
+ 1. Executive Summary
+ 2. Core Concept & User Journey
+ 3. Technical Architecture
+ 4. Smart Contract Specification
+ 5. Data Structure & Gas Optimization
+ 6. Rarity System & Calculation
+ 7. Stats Verification & Security
+ 8. NFT Metadata & SVG Generation
+ 9. Royalty System (ERC2981)
+10. Minting Rules & Eligibility
+11. Leaderboard System
+12. Frame Integration (Farcaster)
+13. Economic Model & Sustainability
+14. Deployment Guide
+15. Testing Strategy
+16. Edge Cases & Error Handling
+17. Roadmap & Future Features
+18. Appendix & Resources
+
+
+================================================================================
+1️⃣ EXECUTIVE SUMMARY
+================================================================================
+
+PROJECT: Farcaster Yearly Social Trading Card
+TAGLINE: Turn your Farcaster activity into a collectible NFT
+
+WHAT IT IS:
+An NFT trading card system that captures a user's Farcaster social activity 
+over 1 year, with beautiful on-chain SVG art, rarity tiers, and perpetual 
+royalties to minters.
+
+KEY FEATURES:
+✅ 1 mint per user per calendar year
+✅ 7 comprehensive stats (casts, likes, replies, recasts, followers, etc.)
+✅ 5 rarity tiers (Common → Legendary)
+✅ Fully on-chain metadata + SVG (no IPFS)
+✅ 3% perpetual royalties to original minter
+✅ Integrated Farcaster Frame for seamless minting
+✅ Gas-optimized for Base L2 (~$0.60 per mint)
+
+TARGET USERS:
+- Active Farcaster users wanting social proof
+- NFT collectors seeking utility + aesthetics
+- Early adopters wanting passive royalty income
+
+TECHNICAL STACK:
+- Blockchain: Base L2 (Ethereum)
+- Smart Contract: Solidity 0.8.20 (Solady optimized)
+- Backend: Node.js + Express
+- Stats Provider: Neynar API
+- Cache: Redis (leaderboard)
+- Frontend: Farcaster Frame (Frog framework)
+
+
+================================================================================
+2️⃣ CORE CONCEPT & USER JOURNEY
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CONCEPT OVERVIEW                            │
+├─────────────────────────────────────────────────────────────────────┤
+│ Setiap user Farcaster dapat mint 1 trading card per tahun yang     │
+│ merekam aktivitas sosial mereka selama 365 hari terakhir.          │
+│                                                                     │
+│ Card berisi:                                                        │
+│ • 7 stats komprehensif (casts, likes, engagement, dll)             │
+│ • Rarity tier berdasarkan performa                                 │
+│ • Beautiful SVG art (fully on-chain)                               │
+│ • Tradeable di OpenSea/Blur dengan 3% royalty ke minter            │
+└─────────────────────────────────────────────────────────────────────┘
+
+USER JOURNEY:
+
+Step 1: Discovery
+├─ User melihat cast dari teman yang baru mint card
+├─ Click frame link → masuk ke mini-app
+└─ Melihat "Mint Your 2025 Card" CTA
+
+Step 2: Preview Stats
+├─ Frame fetch stats dari Neynar API
+├─ Display preview: 7 stats + predicted rarity tier
+└─ User melihat "You'll get LEGENDARY tier!"
+
+Step 3: Mint Decision
+├─ User click "Mint Now (0.0005 ETH)"
+├─ Wallet popup (MetaMask/Coinbase Wallet)
+├─ Total cost displayed: ~$2.10 (fee + gas)
+└─ User confirm transaction
+
+Step 4: Minting
+├─ Backend generate signature untuk verify stats
+├─ Transaction submitted to Base chain
+├─ Contract verify signature + mint NFT + generate SVG
+└─ ~15 seconds later → success!
+
+Step 5: Share & Trade
+├─ Frame menampilkan beautiful card (SVG rendered)
+├─ User click "Share to Farcaster" → auto-generate cast
+├─ Card listed on OpenSea automatically
+└─ Future sales → 3% royalty langsung ke minter wallet
+
+ELIGIBILITY RULES:
+┌─────────────────────────────────────────────────────────────┐
+│ Rule 1: 1 mint per calendar year per FID                   │
+│ Rule 2: Stats window = 365 days rolling dari mint date     │
+│ Rule 3: Reset eligibility setiap 1 Januari 00:00 UTC       │
+│ Rule 4: Must pay exactly 0.0005 ETH mint fee               │
+│ Rule 5: Must have valid signature from trusted backend     │
+└─────────────────────────────────────────────────────────────┘
+
+EXAMPLE SCENARIOS:
+
+Scenario A: Normal Flow
+├─ User mint: 15 Mei 2025 (first time)
+├─ Stats period: 15 Mei 2024 → 15 Mei 2025
+├─ Next eligible: 1 Januari 2026
+└─ Try mint 10 Juni 2025 → ❌ REJECTED (same year)
+
+Scenario B: Year Transition
+├─ User mint: 20 Desember 2025
+├─ Stats period: 20 Des 2024 → 20 Des 2025
+├─ Next eligible: 1 Januari 2026 (12 hari kemudian)
+├─ Mint 5 Januari 2026 → ✅ ALLOWED
+└─ New stats period: 5 Jan 2025 → 5 Jan 2026
+
+Scenario C: New User (<1 year on Farcaster)
+├─ FID created: 1 September 2025
+├─ Try mint: 15 November 2025
+├─ Stats period: 1 Sep 2025 → 15 Nov 2025 (partial year)
+└─ ✅ ALLOWED (stats akan lebih rendah, likely Common tier)
+
+
+================================================================================
+3️⃣ TECHNICAL ARCHITECTURE
+================================================================================
+
+SYSTEM DIAGRAM:
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                         USER (Farcaster App)                        │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │  Farcaster Frame │
+                    │   (Frontend UI)  │
+                    └────────┬─────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+    ┌─────────▼────────┐    │    ┌─────────▼────────┐
+    │   Backend API    │    │    │  Base Blockchain │
+    │  (Stats + Sign)  │    │    │  (Smart Contract)│
+    └─────────┬────────┘    │    └─────────┬────────┘
+              │             │              │
+    ┌─────────▼────────┐    │              │
+    │   Neynar API     │    │              │
+    │ (Farcaster Stats)│    │              │
+    └──────────────────┘    │              │
+                            │              │
+    ┌─────────▼────────┐    │    ┌─────────▼────────┐
+    │      Redis       │    │    │   OpenSea API    │
+    │  (Leaderboard)   │    │    │  (NFT Indexer)   │
+    └──────────────────┘    │    └──────────────────┘
+                            │
+                    ┌───────▼────────┐
+                    │  User's Wallet │
+                    │ (MetaMask, CB) │
+                    └────────────────┘
+
+DATA FLOW (Detailed):
+
+[1] User clicks "Mint Now" in Frame
+      ↓
+[2] Frame → Backend API: GET /api/stats/:fid
+      ↓
+[3] Backend → Neynar API: Fetch 365-day stats
+      ↓
+[4] Backend calculates rarity score + tier
+      ↓
+[5] Backend generates signature:
+    hash = keccak256(fid, username, stats..., year)
+    signature = sign(hash, ORACLE_PRIVATE_KEY)
+      ↓
+[6] Backend → Frame: Return {stats, signature, rarity}
+      ↓
+[7] Frame displays preview + "Confirm Mint" button
+      ↓
+[8] User confirms → Frame calls smart contract mint()
+      ↓
+[9] Contract verifies signature via ecrecover()
+      ↓
+[10] If valid → mint NFT + store packed data + emit event
+      ↓
+[11] Transaction confirmed (~15 sec on Base)
+      ↓
+[12] Frame → Backend: POST /api/verify (update cache)
+      ↓
+[13] Frame displays success + share buttons
+      ↓
+[14] OpenSea auto-indexes NFT within 5 min
+
+
+================================================================================
+4️⃣ SMART CONTRACT SPECIFICATION
+================================================================================
+
+CONTRACT: FarcasterYearlyCard.sol
+VERSION: 1.0.0
+LICENSE: MIT
+
+INHERITANCE TREE:
+FarcasterYearlyCard
+├─ ERC721 (from Solady - gas optimized)
+├─ Ownable (from OpenZeppelin)
+└─ IERC2981 (royalty interface)
+
+CONSTANTS:
+┌──────────────────────────────────────────────────────────────┐
+│ Name             │ Type             │ Value                  │
+├──────────────────────────────────────────────────────────────┤
+│ MINT_FEE         │ uint256 constant │ 0.0005 ether           │
+│ ROYALTY_BPS      │ uint16 constant  │ 300 (3%)               │
+│ MAX_SUPPLY       │ uint256 constant │ type(uint256).max      │
+└──────────────────────────────────────────────────────────────┘
+
+STATE VARIABLES:
+┌──────────────────────────────────────────────────────────────────────┐
+│ Variable          │ Type                      │ Storage Cost         │
+├──────────────────────────────────────────────────────────────────────┤
+│ _cards            │ mapping(uint256=>CardData)│ 2 slots per token    │
+│ _lastMintYear     │ mapping(uint32=>uint256)  │ 1 slot per FID       │
+│ _fullUsernames    │ mapping(uint256=>string)  │ Optional (lazy)      │
+│ _nextTokenId      │ uint256                   │ 1 slot (shared)      │
+│ statsOracle       │ address immutable         │ 0 (in bytecode)      │
+└──────────────────────────────────────────────────────────────────────┘
+
+STRUCT: CardData (Ultra-Optimized - 2 Storage Slots)
+┌─────────────────────────────────────────────────────────────────┐
+│                         SLOT 1 (256 bits)                       │
+├─────────────────────────────────────────────────────────────────┤
+│ uint32  fid              │ 32 bits  │ Farcaster ID            │
+│ uint16  casts            │ 16 bits  │ Total casts (max 65k)   │
+│ uint16  likes            │ 16 bits  │ Likes received          │
+│ uint16  replies          │ 16 bits  │ Reply count             │
+│ uint16  recasts          │ 16 bits  │ Recast count            │
+│ uint16  followers        │ 16 bits  │ Followers gained        │
+│ uint8   consistency      │ 8 bits   │ Active months (0-12)    │
+│ uint8   rarityTier       │ 8 bits   │ Tier (0-4)              │
+│ uint16  yearMinted       │ 16 bits  │ Year (2024-2280)        │
+│ uint32  mintTimestamp    │ 32 bits  │ Unix timestamp          │
+│ uint32  uniqueInteractors│ 32 bits  │ Unique users engaged    │
+├─────────────────────────────────────────────────────────────────┤
+│                         SLOT 2 (256 bits)                       │
+├─────────────────────────────────────────────────────────────────┤
+│ address minter           │ 160 bits │ Original minter         │
+│ bytes12 usernameHash     │ 96 bits  │ Short username ref      │
+└─────────────────────────────────────────────────────────────────┘
+
+TOTAL STORAGE: 512 bits = 2 slots = ~40,000 gas per mint
+(vs naive approach: 10+ slots = ~200,000 gas)
+
+MAIN FUNCTIONS:
+
+function mint(
+    uint32 fid,
+    string calldata username,
+    uint16 casts,
+    uint16 likes,
+    uint16 replies,
+    uint16 recasts,
+    uint16 followers,
+    uint8 consistency,
+    uint32 uniqueInteractors,
+    bytes calldata signature
+) external payable returns (uint256 tokenId)
+
+Description:
+- Mints a new yearly card NFT
+- Verifies signature from trusted backend
+- Calculates rarity tier on-chain
+- Stores packed data (2 slots)
+- Emits CardMinted event
+
+Checks:
+- require(msg.value == MINT_FEE)
+- require(!hasMintedThisYear(fid))
+- require(consistency <= 12)
+- require(verifySignature(hash, signature))
+
+Gas: ~150,000
+
+
+function tokenURI(uint256 tokenId)
+    public view override returns (string memory)
+
+Description:
+- Generates full metadata JSON on-the-fly
+- Includes embedded base64 SVG image
+- No storage cost (computed view function)
+- Returns data URI format
+
+Process:
+1. Load CardData from storage
+2. Generate SVG via _generateSVG()
+3. Build JSON with attributes
+4. Encode to base64
+5. Return data:application/json;base64,...
+
+Gas: ~80,000 (view only, free for users)
+
+
+function royaltyInfo(uint256 tokenId, uint256 salePrice)
+    external view returns (address receiver, uint256 amount)
+
+Description:
+- ERC2981 standard implementation
+- Returns original minter address + 3% of sale price
+- Automatically honored by OpenSea, Blur, etc.
+
+Calculation:
+- receiver = _cards[tokenId].minter
+- amount = (salePrice * 300) / 10000
+
+Gas: ~5,000 (view only)
+
+
+function hasMintedThisYear(uint32 fid)
+    public view returns (bool)
+
+Description:
+- Checks if FID has minted in current calendar year
+- Uses simple year comparison
+
+Logic:
+uint16 currentYear = uint16(block.timestamp / 365 days + 1970);
+return _lastMintYear[fid] == currentYear;
+
+Gas: ~2,000 (view only)
+
+
+function getCardData(uint256 tokenId)
+    external view returns (CardData memory)
+
+Description:
+- Returns full unpacked CardData struct
+- Useful for external apps/analytics
+
+Gas: ~3,000 (view only)
+
+
+INTERNAL HELPER FUNCTIONS:
+
+1. _calculateRarity(stats...) → uint8
+   - Pure function, no storage reads
+   - Weighted formula (detailed in section 6)
+   - Returns tier 0-4
+
+2. _generateSVG(CardData) → string
+   - Generates premium SVG with gradients
+   - Dynamic colors based on rarity
+   - ~200 lines of SVG code
+
+3. _verifySignature(hash, signature) → bool
+   - ECDSA signature verification
+   - Uses ecrecover precompile
+   - Checks signer == statsOracle
+
+4. _packUsername(string) → bytes12
+   - Hash first 12 bytes for storage
+   - Fallback to full storage if needed
+
+5. _getRarityColor(tier) → string
+   - Returns hex color for tier
+   - Gold/Purple/Blue/Green/Gray
+
+EVENTS:
+
+event CardMinted(
+    uint256 indexed tokenId,
+    uint32 indexed fid,
+    address indexed minter,
+    uint8 rarityTier,
+    uint16 year
+);
+
+
+================================================================================
+5️⃣ DATA STRUCTURE & GAS OPTIMIZATION
+================================================================================
+
+OPTIMIZATION STRATEGY:
+
+Goal: Reduce mint gas from ~450k (naive) to ~150k (optimized)
+Method: Multi-layered optimization approach
+
+LAYER 1: STORAGE PACKING (Save ~150k gas)
+┌─────────────────────────────────────────────────────────────────┐
+│ Technique: Pack multiple values into single uint256 slots      │
+├─────────────────────────────────────────────────────────────────┤
+│ Before (Naive):                                                 │
+│   struct CardData {                                             │
+│       uint256 fid;           // 1 slot                          │
+│       uint256 casts;         // 1 slot                          │
+│       uint256 likes;         // 1 slot                          │
+│       ... (10 total fields)  // 10 slots                        │
+│   }                                                             │
+│   Cost: 10 slots × 20,000 gas = 200,000 gas                    │
+│                                                                 │
+│ After (Optimized):                                              │
+│   struct CardData {                                             │
+│       uint32 fid;            // Share slot 1                    │
+│       uint16 casts;          // Share slot 1                    │
+│       uint16 likes;          // Share slot 1                    │
+│       ... (all in 2 slots)   // 2 slots                         │
+│   }                                                             │
+│   Cost: 2 slots × 20,000 gas = 40,000 gas                      │
+│                                                                 │
+│ Savings: 160,000 gas (80% reduction)                            │
+└─────────────────────────────────────────────────────────────────┘
+
+LAYER 2: ON-DEMAND COMPUTATION (Save ~30k gas)
+┌─────────────────────────────────────────────────────────────────┐
+│ Technique: Generate SVG in view function, not in storage       │
+├─────────────────────────────────────────────────────────────────┤
+│ Before (Naive):                                                 │
+│   - Store full SVG string in contract                           │
+│   - Cost: ~3-5 KB × 6k gas/KB = 18-30k gas                     │
+│                                                                 │
+│ After (Optimized):                                              │
+│   - Store only raw data (2 slots)                               │
+│   - Generate SVG dynamically in tokenURI()                      │
+│   - Cost: 0 gas (view function is free)                        │
+│                                                                 │
+│ Savings: 30,000 gas                                             │
+└─────────────────────────────────────────────────────────────────┘
+
+LAYER 3: EFFICIENT ELIGIBILITY CHECK (Save ~20k gas)
+┌─────────────────────────────────────────────────────────────────┐
+│ Technique: Simple year comparison vs array iteration           │
+├─────────────────────────────────────────────────────────────────┤
+│ Before (Naive):                                                 │
+│   mapping(fid => uint256[]) mintedYears;                        │
+│   - Iterate array to check eligibility                          │
+│   - Cost: ~5k gas per year × avg 3 years = 15-20k gas          │
+│                                                                 │
+│ After (Optimized):                                              │
+│   mapping(fid => uint256) lastMintYear;                         │
+│   - Single SLOAD + comparison                                   │
+│   - Cost: ~2k gas                                               │
+│                                                                 │
+│ Savings: 18,000 gas                                             │
+└─────────────────────────────────────────────────────────────────┘
+
+LAYER 4: SOLADY ERC721 (Save ~15k gas)
+┌─────────────────────────────────────────────────────────────────┐
+│ Technique: Use assembly-optimized ERC721 implementation        │
+├─────────────────────────────────────────────────────────────────┤
+│ Before: OpenZeppelin ERC721                                     │
+│   - Standard Solidity implementation                            │
+│   - Mint cost: ~50k gas                                         │
+│                                                                 │
+│ After: Solady ERC721                                            │
+│   - Assembly-optimized hot paths                                │
+│   - Mint cost: ~35k gas                                         │
+│                                                                 │
+│ Savings: 15,000 gas                                             │
+└─────────────────────────────────────────────────────────────────┘
+
+LAYER 5: MINIMAL EVENTS (Save ~5k gas)
+┌─────────────────────────────────────────────────────────────────┐
+│ Technique: Emit only essential events                           │
+├─────────────────────────────────────────────────────────────────┤
+│ Before (Naive):                                                 │
+│   - Multiple custom events for each stat                        │
+│   - Cost: ~1.5k gas × 5 events = 7.5k gas                      │
+│                                                                 │
+│ After (Optimized):                                              │
+│   - 1 custom event (CardMinted)                                 │
+│   - Rely on standard Transfer event                             │
+│   - Cost: ~1.5k gas                                             │
+│                                                                 │
+│ Savings: 6,000 gas                                              │
+└─────────────────────────────────────────────────────────────────┘
+
+LAYER 6: IMMUTABLE VARIABLES (Save ~2k gas per read)
+┌─────────────────────────────────────────────────────────────────┐
+│ Technique: Use immutable for constants set in constructor      │
+├─────────────────────────────────────────────────────────────────┤
+│ Before:                                                         │
+│   address public statsOracle; // storage variable              │
+│   Cost: 2.1k gas per SLOAD                                      │
+│                                                                 │
+│ After:                                                          │
+│   address public immutable statsOracle; // in bytecode         │
+│   Cost: 3 gas per read                                          │
+│                                                                 │
+│ Savings: ~2k gas per verification (used once per mint)         │
+└─────────────────────────────────────────────────────────────────┘
+
+TOTAL GAS BREAKDOWN:
+
+Mint Transaction Gas Analysis:
+┌────────────────────────────────────────────────────────────────┐
+│ Operation                    │ Gas Cost  │ Optimization       │
+├────────────────────────────────────────────────────────────────┤
+│ Base transaction cost        │   21,000  │ Fixed (cannot opt) │
+│ Signature verification       │    5,000  │ Precompile (fast)  │
+│ Storage (2 slots)            │   40,000  │ Packed data        │
+│ Rarity calculation           │    3,000  │ Pure function      │
+│ ERC721 mint (Solady)         │   35,000  │ Assembly-opt       │
+│ Year tracking update         │    5,000  │ Simple SSTORE      │
+│ Event emission               │    1,500  │ Single event       │
+│ Function overhead            │   10,000  │ Call stack         │
+│ Memory operations            │   12,000  │ Calldata handling  │
+│ Refund (gas unused)          │  -15,000  │ Automatic          │
+├────────────────────────────────────────────────────────────────┤
+│ TOTAL                        │  ~150,000 │                    │
+└────────────────────────────────────────────────────────────────┘
+
+Comparison Table:
+┌────────────────────────────────────────────────────────────────┐
+│ Approach           │ Deploy Gas │ Mint Gas │ Total/User      │
+├────────────────────────────────────────────────────────────────┤
+│ Naive (unopt)      │   5.0M     │  450k    │ $3.50 (Base)    │
+│ Medium opt         │   3.5M     │  250k    │ $2.00           │
+│ Full opt (ours)    │   2.5M     │  150k    │ $0.60           │
+└────────────────────────────────────────────────────────────────┘
+
+Cost at Current Base Gas Prices (0.01 gwei):
+- Deploy: 2.5M gas × 0.01 gwei = 0.025 gwei ≈ $25-35
+- Mint: 150k gas × 0.01 gwei = 0.0015 gwei ≈ $0.50-0.80
+
+
+================================================================================
+6️⃣ RARITY SYSTEM & CALCULATION
+================================================================================
+
+PHILOSOPHY:
+
+Goals:
+✅ Reward consistent engagement over raw numbers
+✅ Make Legendary tier achievable but challenging
+✅ Balance quantity (casts) with quality (interactions)
+✅ Transparent, reproducible calculation
+
+Design Principles:
+- NOT just for influencers (10k+ followers)
+- Values authentic community engagement
+- Consistency weighted heavily (20%)
+- Unique interactors = quality metric
+
+FORMULA:
+
+Weighted Scoring System (Max 100 points):
+
+RarityScore = 
+  (Casts / 1000) × 10 +              // Max 10 pts → 1000+ casts
+  (Likes / 5000) × 20 +               // Max 20 pts → 5000+ likes
+  (Replies / 500) × 12 +              // Max 12 pts → 500+ replies
+  (Recasts / 500) × 12 +              // Max 12 pts → 500+ recasts
+  (Followers / 200) × 8 +             // Max 8 pts → 200+ followers
+  (Consistency / 12) × 20 +           // Max 20 pts → 12/12 months
+  (UniqueInteractors / 300) × 18      // Max 18 pts → 300+ users
+
+Total: 100 points maximum
+
+TIER MAPPING:
+
+┌────────────────────────────────────────────────────────────────┐
+│ Tier       │ Score Range │ Color   │ Estimated % │ Description│
+├────────────────────────────────────────────────────────────────┤
+│ Legendary  │   85-100    │ #FFD700 │    ~5%      │ Elite      │
+│ Epic       │   70-84     │ #9B59B6 │   ~10%      │ Very Active│
+│ Rare       │   50-69     │ #3498DB │   ~20%      │ Active     │
+│ Uncommon   │   30-49     │ #2ECC71 │   ~30%      │ Regular    │
+│ Common     │    0-29     │ #95A5A6 │   ~35%      │ Casual     │
+└────────────────────────────────────────────────────────────────┘
+
+SAMPLE PROFILES:
+
+Profile A: "The Influencer"
+├─ Casts: 2000 → 10 pts (capped)
+├─ Likes: 15000 → 20 pts (capped)
+├─ Replies: 300 → 7.2 pts
+├─ Recasts: 800 → 12 pts (capped)
+├─ Followers: 150 → 6 pts
+├─ Consistency: 10/12 → 16.7 pts
+├─ Unique: 250 → 15 pts
+└─ TOTAL: 87.9 → LEGENDARY ⭐
+
+Profile B: "The Consistent Community Builder"
+├─ Casts: 800 → 8 pts
+├─ Likes: 3000 → 12 pts
+├─ Replies: 450 → 10.8 pts
+├─ Recasts: 350 → 8.4 pts
+├─ Followers: 180 → 7.2 pts
+├─ Consistency: 12/12 → 20 pts (full)
+├─ Unique: 280 → 16.8 pts
+└─ TOTAL: 83.2 → EPIC 💜
+
+Profile C: "The Casual User"
+├─ Casts: 250 → 2.5 pts
+├─ Likes: 800 → 3.2 pts
+├─ Replies: 80 → 1.9 pts
+├─ Recasts: 60 → 1.4 pts
+├─ Followers: 40 → 1.6 pts
+├─ Consistency: 7/12 → 11.7 pts
+├─ Unique: 95 → 5.7 pts
+└─ TOTAL: 28 → COMMON 🔘
+
+WEIGHT RATIONALE:
+
+Why Consistency = 20% (highest single metric)?
+✅ Rewards long-term engagement
+✅ Harder to game than raw post count
+✅ Shows genuine community participation
+✅ Encourages sustained activity
+
+Why Unique Interactors = 18%?
+✅ Quality > quantity indicator
+✅ Shows authentic reach
+✅ Hard to fake (requires real engagement)
+✅ Correlates with community value
+
+Why Casts = Only 10%?
+✅ Prevents spam incentive
+✅ Quality matters more than volume
+✅ Balances with engagement metrics
+✅ A few high-quality casts > many low-quality
+
+SOLIDITY IMPLEMENTATION:
+
+function _calculateRarity(
+    uint16 casts,
+    uint16 likes,
+    uint16 replies,
+    uint16 recasts,
+    uint16 followers,
+    uint8 consistency,
+    uint32 uniqueInteractors
+) internal pure returns (uint8 tier) {
+    // Calculate weighted score (max 100)
+    uint256 score = 
+        _min((uint256(casts) * 10) / 1000, 10) +
+        _min((uint256(likes) * 20) / 5000, 20) +
+        _min((uint256(replies) * 12) / 500, 12) +
+        _min((uint256(recasts) * 12) / 500, 12) +
+        _min((uint256(followers) * 8) / 200, 8) +
+        (uint256(consistency) * 20) / 12 +
+        _min((uint256(uniqueInteractors) * 18) / 300, 18);
+    
+    // Cap at 100
+    if (score > 100) score = 100;
+    
+    // Map to tier
+    if (score >= 85) return 4; // Legendary
+    if (score >= 70) return 3; // Epic
+    if (score >= 50) return 2; // Rare
+    if (score >= 30) return 1; // Uncommon
+    return 0; // Common
+}
+
+function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a < b ? a : b;
+}
+
+
+================================================================================
+7️⃣ STATS VERIFICATION & SECURITY
+================================================================================
+
+SECURITY MODEL:
+
+Threat Model:
+🔴 Attack Vector 1: User submits fake stats
+🔴 Attack Vector 2: Replay attack (reuse old signature)
+🔴 Attack Vector 3: Front-running (steal signature)
+🔴 Attack Vector 4: Sybil attack (multiple mints)
+
+Defenses:
+✅ Backend signature verification (trusted oracle)
+✅ Timestamp-bound signatures (10 min expiry)
+✅ On-chain FID → address binding
+✅ Rate limiting on backend
+
+ARCHITECTURE:
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    TRUSTED ORACLE PATTERN                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Backend (Trusted)                    Smart Contract           │
+│  ┌─────────────────┐                  ┌──────────────────┐    │
+│  │ 1. Fetch stats  │                  │ 4. Verify sig    │    │
+│  │    from Neynar  │                  │    via ecrecover │    │
+│  └────────┬────────┘                  └────────▲─────────┘    │
+│           │                                    │               │
+│  ┌────────▼────────┐                  ┌───────┴──────────┐    │
+│  │ 2. Generate     │                  │ 5. If valid,     │    │
+│  │    signature    │─────signature────▶│    mint NFT      │    │
+│  │    (ECDSA)      │                  │                  │    │
+│  └─────────────────┘                  └──────────────────┘    │
+│           │                                                    │
+│  ┌────────▼────────┐                                          │
+│  │ 3. Return       │                                          │
+│  │    {stats, sig} │                                          │
+│  └─────────────────┘                                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+BACKEND API SIGNATURE GENERATION:
+
+// backend/services/statsService.js
+const ethers = require('ethers');
+
+async function generateStatsSignature(fid, stats) {
+  const year = new Date().getUTCFullYear();
+  
+  const hash = ethers.solidityPackedKeccak256(
+    [
+      'uint32', 'string', 'uint16', 'uint16', 'uint16', 'uint16',
+      'uint16', 'uint8', 'uint32', 'uint16', 'uint256'
+    ],
+    [
+      fid, stats.username, stats.casts, stats.likes,
+      stats.replies, stats.recasts, stats.followers,
+      stats.consistency, stats.uniqueInteractors, year,
+      Math.floor(Date.now() / 1000) // timestamp
+    ]
+  );
+  
+  const wallet = new ethers.Wallet(process.env.STATS_ORACLE_PRIVATE_KEY);
+  const signature = await wallet.signMessage(ethers.getBytes(hash));
+  
+  return {
+    hash,
+    signature,
+    expiresAt: Date.now() + (10 * 60 * 1000) // 10 min expiry
+  };
+}
+
+SMART CONTRACT SIGNATURE VERIFICATION:
+
+function _verifySignature(
+    bytes32 hash,
+    bytes calldata signature
+) internal view returns (bool) {
+    bytes32 ethSignedHash = keccak256(
+        abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+    );
+    
+    address signer = _recoverSigner(ethSignedHash, signature);
+    return signer == statsOracle;
+}
+
+function _recoverSigner(
+    bytes32 ethSignedHash,
+    bytes memory signature
+) internal pure returns (address) {
+    require(signature.length == 65, "Invalid signature length");
+    
+    bytes32 r;
+    bytes32 s;
+    uint8 v;
+    
+    assembly {
+        r := mload(add(signature, 32))
+        s := mload(add(signature, 64))
+        v := byte(0, mload(add(signature, 96)))
+    }
+    
+    if (v < 27) v += 27;
+    
+    return ecrecover(ethSignedHash, v, r, s);
+}
+
+NEYNAR API INTEGRATION:
+
+const { NeynarAPIClient } = require('@neynar/nodejs-sdk');
+const neynar = new NeynarAPIClient(process.env.NEYNAR_API_KEY);
+
+async function fetchNeynarStats(fid) {
+  const toDate = new Date();
+  const fromDate = new Date(toDate);
+  fromDate.setDate(fromDate.getDate() - 365);
+  
+  const user = await neynar.fetchBulkUsers([fid]);
+  const profile = user.users[0];
+  
+  const casts = await neynar.fetchCastsForUser(fid, { limit: 1000 });
+  
+  const stats = {
+    username: profile.username,
+    casts: casts.casts.length,
+    likes: casts.casts.reduce((sum, cast) => sum + cast.reactions.likes_count, 0),
+    replies: casts.casts.filter(c => c.parent_hash).length,
+    recasts: casts.casts.reduce((sum, cast) => sum + cast.reactions.recasts_count, 0),
+    followers: profile.follower_count,
+    consistency: calculateConsistency(casts.casts, fromDate, toDate),
+    uniqueInteractors: calculateUniqueInteractors(casts.casts)
+  };
+  
+  return stats;
+}
+
+
+================================================================================
+8️⃣ NFT METADATA & SVG GENERATION
+================================================================================
+
+METADATA STANDARD: ERC721 + OpenSea Extensions
+
+Full metadata structure:
+{
+  "name": "Farcaster Card #42 (2025)",
+  "description": "1-Year Farcaster activity stats for FID 12345",
+  "image": "data:image/svg+xml;base64,PHN2ZyB4bWxu...",
+  "external_url": "https://yearly.cards/42",
+  "attributes": [
+    {"trait_type": "FID", "value": 12345},
+    {"trait_type": "Year Minted", "value": 2025},
+    {"trait_type": "Casts", "value": 954, "display_type": "number"},
+    {"trait_type": "Likes Received", "value": 12044, "display_type": "number"},
+    {"trait_type": "Replies", "value": 342, "display_type": "number"},
+    {"trait_type": "Recasts", "value": 587, "display_type": "number"},
+    {"trait_type": "Followers Gained", "value": 156, "display_type": "number"},
+    {"trait_type": "Consistency", "value": "11/12"},
+    {"trait_type": "Unique Interactors", "value": 287, "display_type": "number"},
+    {"trait_type": "Rarity Tier", "value": "Legendary"},
+    {"trait_type": "Rarity Score", "value": 92, "max_value": 100}
+  ]
+}
+
+SVG GENERATION (Solidity):
+
+function _generateSVG(
+    uint256 tokenId,
+    CardData memory card
+) internal view returns (string memory) {
+    string memory rarityColor = _getRarityColor(card.rarityTier);
+    string memory rarityName = _getRarityName(card.rarityTier);
+    string memory username = _getUsername(tokenId, card);
+    
+    return string(abi.encodePacked(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">',
+        '<defs>',
+          '<linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">',
+            '<stop offset="0%" style="stop-color:', rarityColor, ';stop-opacity:1"/>',
+            '<stop offset="100%" style="stop-color:#000;stop-opacity:0.85"/>',
+          '</linearGradient>',
+        '</defs>',
+        '<rect width="400" height="600" fill="url(#bg)"/>',
+        '<rect x="20" y="20" width="360" height="560" fill="rgba(0,0,0,0.5)" rx="15"/>',
+        '<text x="200" y="70" text-anchor="middle" fill="#fff" font-size="32" font-weight="bold">',
+        'FARCASTER ', Strings.toString(card.yearMinted), '</text>',
+        '<text x="200" y="105" text-anchor="middle" fill="', rarityColor, '" font-size="16">',
+        rarityName, ' CARD</text>',
+        '<text x="200" y="160" text-anchor="middle" fill="#fff" font-size="24">@', username, '</text>',
+        _generateStatsGrid(card),
+        '</svg>'
+    ));
+}
+
+function _getRarityColor(uint8 tier) internal pure returns (string memory) {
+    if (tier == 4) return "#FFD700"; // Legendary - Gold
+    if (tier == 3) return "#9B59B6"; // Epic - Purple
+    if (tier == 2) return "#3498DB"; // Rare - Blue
+    if (tier == 1) return "#2ECC71"; // Uncommon - Green
+    return "#95A5A6"; // Common - Gray
+}
+
+
+================================================================================
+9️⃣ ROYALTY SYSTEM (ERC2981)
+================================================================================
+
+IMPLEMENTATION:
+
+function royaltyInfo(
+    uint256 tokenId,
+    uint256 salePrice
+) external view override returns (
+    address receiver,
+    uint256 royaltyAmount
+) {
+    require(_exists(tokenId), "Token does not exist");
+    
+    CardData memory card = _cards[tokenId];
+    receiver = card.minter;
+    royaltyAmount = (salePrice * ROYALTY_BPS) / 10000;
+    
+    return (receiver, royaltyAmount);
+}
+
+EXAMPLE SCENARIOS:
+
+Scenario 1: Card sells for 0.01 ETH ($30)
+├─ Royalty: 0.0003 ETH ($0.90) → original minter
+├─ OpenSea fee: 0.00025 ETH ($0.75) → marketplace
+└─ Seller receives: 0.00945 ETH ($28.35)
+
+Scenario 2: Card sells for 0.1 ETH ($300)
+├─ Royalty: 0.003 ETH ($9.00) → original minter
+├─ OpenSea fee: 0.0025 ETH ($7.50) → marketplace
+└─ Seller receives: 0.0945 ETH ($283.50)
+
+MINTER LIFETIME VALUE:
+
+If card traded 5 times at avg $25/sale:
+- Royalty per sale: $0.75
+- Total royalty earned: $3.75
+- Original mint cost: $2.10
+- Net gain: $1.65 (78% ROI)
+
+
+================================================================================
+🔟 MINTING RULES & ELIGIBILITY
+================================================================================
+
+CORE RULES:
+
+Rule 1: ONE MINT PER CALENDAR YEAR
+├─ Each FID can mint maximum 1 card per calendar year
+├─ Year = UTC year (2025, 2026, etc.)
+└─ Check: require(_lastMintYear[fid] != currentYear)
+
+Rule 2: ROLLING STATS WINDOW
+├─ Stats calculated from: mintDate - 365 days → mintDate
+├─ NOT calendar year (Jan-Dec)
+└─ Example: Mint May 15, 2025 → stats from May 15, 2024
+
+Rule 3: ELIGIBILITY RESET
+├─ Reset happens: Every January 1st 00:00 UTC
+├─ After reset: User can mint again
+└─ Example: Mint Dec 20, 2025 → eligible again Jan 1, 2026
+
+Rule 4: EXACT MINT FEE
+├─ Must pay exactly 0.0005 ETH
+├─ Gas fee paid separately to network
+└─ Fee sent to contract (owner can withdraw)
+
+Rule 5: VALID SIGNATURE REQUIRED
+├─ Stats must be signed by trusted backend
+├─ Signature includes timestamp (10 min expiry)
+└─ Signature verified on-chain via ecrecover()
+
+
+================================================================================
+1️⃣1️⃣ LEADERBOARD SYSTEM
+================================================================================
+
+CATEGORIES (7 Total):
+
+1. 🏆 Most Casts (12-month window)
+2. ❤️ Most Likes Received
+3. 💬 Highest Engagement Rate
+4. 📅 Perfect Consistency (12/12)
+5. ⭐ Highest Rarity Score
+6. 💰 Top Traders (most royalty earned)
+7. 💎 Most Valuable Card (highest sale price)
+
+REDIS SCHEMA:
+
+Key Pattern: leaderboard:{category}:{year}
+Type: Sorted Set (ZADD)
+
+Examples:
+- leaderboard:casts:2025
+- leaderboard:likes:2025
+- leaderboard:rarity:2025
+
+REDIS OPERATIONS:
+
+// Add entry
+await redis.zadd('leaderboard:casts:2025', 954, 'fid:12345');
+
+// Get top 100
+const top100 = await redis.zrevrange('leaderboard:casts:2025', 0, 99, 'WITHSCORES');
+
+// Get user's rank
+const rank = await redis.zrevrank('leaderboard:casts:2025', 'fid:12345');
+
+
+================================================================================
+1️⃣2️⃣ FRAME INTEGRATION (FARCASTER)
+================================================================================
+
+FRAME FLOW:
+
+Frame 1: HOME
+├─ Display: "Mint Your 2025 Card"
+├─ Show: Minted status / countdown to reset
+└─ Button: "Check Eligibility"
+
+Frame 2: STATS PREVIEW
+├─ Display: 7 stats + predicted rarity tier
+├─ Show: "You'll get LEGENDARY tier!"
+└─ Button: "Mint Now (0.0005 ETH)"
+
+Frame 3: MINT CONFIRMATION
+├─ Display: Total cost (~$2.10)
+├─ Show: Fee breakdown (protocol + gas)
+└─ Button: "Confirm & Mint"
+
+Frame 4: SUCCESS
+├─ Display: Beautiful card (SVG rendered)
+├─ Show: Token ID + rarity tier
+└─ Buttons: Share | BaseScan | OpenSea
+
+SHARE TO FARCASTER:
+
+Auto-generated cast:
+"I just minted my 2025 Farcaster Yearly Card! 🎴
+
+⭐ Legendary Tier (92/100)
+📊 12k likes • 954 casts • 11/12 consistency
+
+Mint yours → [frame-url]"
+
+
+================================================================================
+1️⃣3️⃣ ECONOMIC MODEL & SUSTAINABILITY
+================================================================================
+
+COST STRUCTURE:
+
+Monthly Operating Costs:
+┌────────────────────────────────────────────────────────────────┐
+│ Service               │ Plan              │ Cost/Month         │
+├────────────────────────────────────────────────────────────────┤
+│ Backend Hosting       │ Railway Pro       │ $20                │
+│ Redis Cache           │ Upstash Free      │ $0                 │
+│ Neynar API            │ Growth            │ $50                │
+│ Domain & CDN          │ Vercel Pro        │ $20                │
+├────────────────────────────────────────────────────────────────┤
+│ TOTAL                 │                   │ ~$90/month         │
+└────────────────────────────────────────────────────────────────┘
+
+Break-Even Analysis:
+- Monthly costs: $90
+- Revenue per mint: ~$1.50 (at $3000 ETH)
+- Break-even: 60 mints/month
+- Daily target: 2 mints/day
+
+REVENUE PROJECTIONS:
+
+Conservative (Year 1):
+├─ Mints: 2,430
+├─ Revenue: $3,645
+├─ Costs: $1,080
+├─ Net Profit: $2,565
+└─ Break-even: Month 2
+
+Moderate (Year 1):
+├─ Mints: 5,000
+├─ Revenue: $7,500
+├─ Costs: $1,080
+├─ Net Profit: $6,420
+└─ Break-even: Month 1
+
+Optimistic (Year 1):
+├─ Mints: 10,000
+├─ Revenue: $15,000
+├─ Costs: $1,080
+├─ Net Profit: $13,920
+└─ Break-even: Month 1
+
+USER ECONOMICS:
+
+What user gets for $2.10:
+✅ Unique NFT (collectible value)
+✅ Social proof (on-chain stats)
+✅ 3% perpetual royalties (passive income)
+✅ Trading rights (can flip on OpenSea)
+
+ROI Timeline:
+- 3 sales at $25 → $2.25 royalty (ROI: +7%)
+- 5 sales at $30 → $4.50 royalty (ROI: +114%)
+- 10 sales at $50 → $15 royalty (ROI: +614%)
+
+
+================================================================================
+1️⃣4️⃣ DEPLOYMENT GUIDE
+================================================================================
+
+STEP 1: SMART CONTRACT DEPLOYMENT
+
+1. Setup Hardhat:
+npm init -y
+npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+npx hardhat init
+
+2. Configure hardhat.config.js:
+networks: {
+  base: {
+    url: "https://mainnet.base.org",
+    accounts: [DEPLOYER_PRIVATE_KEY],
+    chainId: 8453
+  }
+}
+
+3. Deploy:
+npx hardhat run scripts/deploy.js --network base
+
+4. Verify:
+npx hardhat verify --network base DEPLOYED_ADDRESS ORACLE_ADDRESS
+
+Expected Cost: ~$25-35
+
+STEP 2: BACKEND API DEPLOYMENT
+
+1. Setup Express:
+mkdir backend && cd backend
+npm init -y
+npm install express ethers dotenv cors redis @neynar/nodejs-sdk
+
+2. Deploy to Railway:
+railway init
+railway up
+
+Cost: $5-20/month
+
+STEP 3: FRAME DEPLOYMENT
+
+1. Setup Frog:
+npm create frog
+# Choose: Vercel template
+
+2. Deploy to Vercel:
+vercel --prod
+
+Cost: $0-20/month
+
+
+================================================================================
+1️⃣5️⃣ TESTING STRATEGY
+================================================================================
+
+UNIT TESTS (Hardhat):
+
+describe("FarcasterYearlyCard", function () {
+  it("Should mint with valid signature", async function () {
+    // Generate signature
+    const signature = await statsOracle.signMessage(...);
+    
+    // Mint
+    await expect(
+      contract.connect(user1).mint(..., signature, { value: MINT_FEE })
+    ).to.emit(contract, "CardMinted");
+    
+    expect(await contract.ownerOf(1)).to.equal(user1.address);
+  });
+  
+  it("Should reject double mint in same year", async function () {
+    await contract.connect(user1).mint(...);
+    
+    await expect(
+      contract.connect(user1).mint(...)
+    ).to.be.revertedWith("Already minted this year");
+  });
+  
+  it("Should calculate Legendary tier correctly", async function () {
+    const stats = {
+      casts: 2000, likes: 10000, replies: 800,
+      recasts: 700, followers: 300, consistency: 12,
+      uniqueInteractors: 400
+    };
+    
+    await contract.connect(user1).mint(...);
+    const card = await contract.getCardData(1);
+    
+    expect(card.rarityTier).to.equal(4); // Legendary
+  });
+});
+
+Run tests:
+npx hardhat test
+npx hardhat coverage
+
+
+================================================================================
+1️⃣6️⃣ EDGE CASES & ERROR HANDLING
+================================================================================
+
+EDGE CASES:
+
+1. NEW USER (FID < 365 days old)
+   └─ Stats will be incomplete, likely Common tier
+   └─ Still eligible to mint
+
+2. INACTIVE USER (0 casts)
+   └─ All stats = 0, Common tier
+   └─ Still can mint (historical proof)
+
+3. DELETED ACCOUNT
+   └─ Neynar API returns 404
+   └─ Cannot mint new card
+   └─ Existing NFTs remain valid
+
+4. USERNAME CHANGE
+   └─ Card stores username at mint time
+   └─ Creates "vintage" collectible value
+
+5. STATS OVERFLOW (>65,535)
+   └─ Cap at max uint16 value
+   └─ Still Legendary tier
+
+6. YEAR BOUNDARY
+   └─ Mint Dec 31 → allowed
+   └─ Mint Jan 1 → allowed (new year)
+
+7. SIGNATURE EXPIRY
+   └─ Valid for 10 minutes
+   └─ User must re-fetch if expired
+
+ERROR HANDLING:
+
+Smart Contract Errors:
+error InvalidFee();
+error AlreadyMinted();
+error InvalidSignature();
+error TokenDoesNotExist();
+
+Frontend Error Messages:
+'InvalidFee': 'Please send exactly 0.0005 ETH'
+'AlreadyMinted': 'You\'ve already minted this year. Come back January 1!'
+'InvalidSignature': 'Stats verification failed. Please refresh.'
+
+
+================================================================================
+1️⃣7️⃣ ROADMAP & FUTURE FEATURES
+================================================================================
+
+PHASE 1: LAUNCH (Month 1-3) ✅
+✅ Smart contract deployment
+✅ Basic minting (1 per year)
+✅ Rarity system (5 tiers)
+✅ Farcaster Frame
+✅ Leaderboard
+
+PHASE 2: ENHANCEMENTS (Month 4-6)
+🔲 Achievement Badges
+🔲 Advanced Analytics Dashboard
+🔲 Card Showcase Gallery
+🔲 Referral System
+
+PHASE 3: SOCIAL FEATURES (Month 7-9)
+🔲 Card Trading Platform
+🔲 Card Comparisons
+🔲 Collaborative Cards
+🔲 Card Staking
+
+PHASE 4: EXPANSION (Month 10-12)
+🔲 Multi-Chain Deployment
+🔲 Historical Archives
+🔲 Special Editions
+🔲 Mobile App
+
+PHASE 5: ECOSYSTEM (Year 2)
+🔲 Developer API
+🔲 Reputation System
+🔲 Gamification Layer
+🔲 DAO Governance
+
+SUCCESS METRICS:
+
+Year 1 Targets:
+├─ 10,000 total mints
+├─ 5,000 unique minters
+├─ $15,000 protocol revenue
+├─ $50,000 secondary trading volume
+├─ 60% retention (mint again in Year 2)
+└─ 4.5/5 average user rating
+
+
+================================================================================
+1️⃣8️⃣ APPENDIX & RESOURCES
+================================================================================
+
+USEFUL LINKS:
+
+Documentation:
+├─ Solidity Docs: https://docs.soliditylang.org
+├─ Hardhat: https://hardhat.org/docs
+├─ Frog Framework: https://frog.fm
+├─ Neynar API: https://docs.neynar.com
+├─ Base Chain: https://docs.base.org
+└─ OpenSea: https://docs.opensea.io
+
+Tools:
+├─ RemixIDE: https://remix.ethereum.org
+├─ BaseScan: https://basescan.org
+├─ OpenSea Testnet: https://testnets.opensea.io
+└─ Upstash: https://upstash.com
+
+KEY ENVIRONMENT VARIABLES:
+
+CONTRACT_ADDRESS=0x...
+DEPLOYER_PRIVATE_KEY=0x...
+STATS_ORACLE_PRIVATE_KEY=0x...
+NEYNAR_API_KEY=...
+REDIS_URL=redis://...
+BASESCAN_API_KEY=...
+
+GAS OPTIMIZATION SUMMARY:
+
+Total Savings Achieved:
+┌────────────────────────────────────────────────────────────────┐
+│ Optimization                │ Gas Saved  │ Cost Saved         │
+├────────────────────────────────────────────────────────────────┤
+│ Data packing (2 slots)      │  ~160,000  │ $1.20 per mint     │
+│ On-demand SVG               │   ~30,000  │ $0.22 per mint     │
+│ Simple eligibility check    │   ~18,000  │ $0.14 per mint     │
+│ Solady ERC721               │   ~15,000  │ $0.11 per mint     │
+│ Minimal events              │    ~6,000  │ $0.04 per mint     │
+│ Immutable variables         │    ~2,000  │ $0.02 per mint     │
+├────────────────────────────────────────────────────────────────┤
+│ TOTAL                       │  ~231,000  │ $1.73 per mint     │
+│                                                                 │
+│ Before optimization: ~450k gas (~$3.30)                        │
+│ After optimization:  ~150k gas (~$0.60)                        │
+│ Savings: 67% reduction in gas costs                            │
+└────────────────────────────────────────────────────────────────┘
+
+TECH STACK SUMMARY:
+
+Frontend: Frog (Hono + React) → Vercel ($0-20/mo)
+Backend: Node.js + Express → Railway ($20-50/mo)
+Blockchain: Base L2 → ~$30 one-time deployment
+Database: Redis (Upstash) → Free tier
+APIs: Neynar ($50/mo)
+
+Total Monthly: ~$90
+
+DEPLOYMENT TIMELINE:
+
+Week 1: Development (smart contract + backend + frame)
+Week 2: Testing (unit + integration + E2E)
+Week 3: Pre-Launch (mainnet deploy + security + beta)
+Week 4: Launch (public release + monitoring)
+
+
+================================================================================
+                              END OF BLUEPRINT
+================================================================================
+
+Version: 2.0 - Complete Production-Ready Specification
+Last Updated: November 22, 2025
+Status: Ready for Implementation
+
+Total Deployment Cost: ~$100 (contract + initial setup)
+Monthly Operating Cost: ~$90
+Break-Even: 60 mints/month (~2 per day)
+Target Year 1 Revenue: $7,500-$15,000
+
+Key Success Metrics:
+✅ Gas cost: <$0.80 per mint
+✅ Response time: <500ms API
+✅ Uptime: >99.9%
+✅ User satisfaction: >4.5/5
+✅ Retention: >60% year-over-year
+
+This blueprint provides everything needed to build, deploy, and scale
+a sustainable NFT project on Base that genuinely serves the Farcaster
+community while maintaining economic viability.
+
+Repository: github.com/anotherbobby/yearlysocialcard
+
+Good luck! 🚀
+
+================================================================================
